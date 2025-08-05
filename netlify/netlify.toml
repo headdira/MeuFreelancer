@@ -1,7 +1,0 @@
-[build]
-  # Este comando é essencial. Ele diz ao Netlify para instalar as dependências
-  # do seu package.json, incluindo o 'firebase-admin'.
-  command = "npm install"
-
-  # Este continua sendo o diretório onde suas funções estão.
-  functions = "netlify/functions"
