@@ -22,17 +22,33 @@ const auth = admin.auth();
  * Endpoint: POST /.netlify/functions/register
  */
 exports.handler = async (event, context) => {
-  // 1. Validação do Método HTTP
+  // Define os cabeçalhos CORS que serão usados em todas as respostas
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*', // Permite qualquer origem
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+
+  // 1. Tratamento da Requisição OPTIONS (Pré-voo do CORS)
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 204, // 204 No Content
+      headers: corsHeaders,
+      body: '',
+    };
+  }
+
+  // 2. Validação do Método HTTP para POST
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
       body: JSON.stringify({ error: 'Método não permitido' }),
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     };
   }
 
   try {
-    // 2. Parse do corpo da requisição
+    // 3. Parse do corpo da requisição
     const {
       userType, // 'freelancer' ou 'contratante'
       email,
@@ -45,19 +61,18 @@ exports.handler = async (event, context) => {
       servicos // Apenas para freelancers
     } = JSON.parse(event.body);
 
-    // 3. Validação dos dados de entrada
+    // 4. Validação dos dados de entrada
     if (!userType || !['freelancer', 'contratante'].includes(userType)) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'O campo "userType" é obrigatório e deve ser "freelancer" ou "contratante".' }) };
+      return { statusCode: 400, body: JSON.stringify({ error: 'O campo "userType" é obrigatório e deve ser "freelancer" ou "contratante".' }), headers: { ...corsHeaders, 'Content-Type': 'application/json' } };
     }
     if (!email || !password || !nomeCompleto || !celular || !cpf) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Campos obrigatórios ausentes: email, password, nomeCompleto, celular, cpf.' }) };
+      return { statusCode: 400, body: JSON.stringify({ error: 'Campos obrigatórios ausentes: email, password, nomeCompleto, celular, cpf.' }), headers: { ...corsHeaders, 'Content-Type': 'application/json' } };
     }
     if (userType === 'freelancer' && !servicos) {
-        return { statusCode: 400, body: JSON.stringify({ error: 'Para o tipo "freelancer", o campo "servicos" é obrigatório.' }) };
+        return { statusCode: 400, body: JSON.stringify({ error: 'Para o tipo "freelancer", o campo "servicos" é obrigatório.' }), headers: { ...corsHeaders, 'Content-Type': 'application/json' } };
     }
 
-
-    // 4. Criar usuário no Firebase Authentication
+    // 5. Criar usuário no Firebase Authentication
     const userRecord = await auth.createUser({
       email: email,
       password: password,
@@ -67,7 +82,7 @@ exports.handler = async (event, context) => {
 
     const uid = userRecord.uid;
 
-    // 5. Preparar dados para salvar no Realtime Database
+    // 6. Preparar dados para salvar no Realtime Database
     const userData = {
       uid: uid,
       userType: userType,
@@ -85,10 +100,10 @@ exports.handler = async (event, context) => {
       userData.servicos = servicos;
     }
 
-    // 6. Salvar dados no Realtime Database
+    // 7. Salvar dados no Realtime Database
     await db.ref(`users/${uid}`).set(userData);
 
-    // 7. Retornar sucesso
+    // 8. Retornar sucesso
     return {
       statusCode: 201, // 201 Created
       body: JSON.stringify({
@@ -96,7 +111,7 @@ exports.handler = async (event, context) => {
         uid: uid,
         user: userData
       }),
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     };
 
   } catch (error) {
@@ -110,7 +125,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 500,
       body: JSON.stringify({ error: errorMessage, details: error.message }),
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     };
   }
 };
